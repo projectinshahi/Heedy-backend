@@ -15,7 +15,7 @@ const app: Application = express();
 app.use(helmet());
 const allowedOrigins = ENV.CORS_ORIGIN.split(',');
 
-app.use(cors({
+app.options('*', cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
 
