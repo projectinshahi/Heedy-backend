@@ -7,7 +7,7 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
 
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
-  
+
   // Clean up error object for production
   const errors = ENV.NODE_ENV === 'development' ? err.stack : undefined;
 
