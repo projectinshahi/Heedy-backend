@@ -34,7 +34,7 @@ app.use(helmet());
 // app.options('*', cors(corsOptions));
 
 const corsConfig = {
-  origin: ENV.CORS_ORIGIN,
+  origin: "*",
   credential: true,
   methods: ["GET", "POST", "PUT", "DELETE"]
 }
