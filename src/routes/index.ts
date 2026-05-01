@@ -7,6 +7,9 @@ import bannerRoutes from './bannerRoutes';
 import couponRoutes from './couponRoutes';
 import testimonialRoutes from './testimonialRoutes';
 import userRoutes from './userRoutes';
+import paymentRoutes from './paymentRoutes';
+import cartRoutes from './cartRoutes';
+import dashboardRoutes from './dashboardRoutes';
 
 const router = Router();
 
@@ -21,5 +24,8 @@ router.use('/banners', bannerRoutes);
 router.use('/coupons', couponRoutes);
 router.use('/testimonials', testimonialRoutes);
 router.use('/users', userRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/cart', cartRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 export default router;

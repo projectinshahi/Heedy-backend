@@ -29,3 +29,39 @@ export const addAddress = asyncHandler(async (req: Request, res: Response) => {
   
   successResponse(res, 201, 'Address added successfully', user.addresses);
 });
+
+// Delete Address
+export const deleteAddress = asyncHandler(async (req: Request, res: Response) => {
+  const user = await User.findById(req.user?._id);
+  if (!user) return errorResponse(res, 404, 'User not found');
+
+  const { addressId } = req.params;
+  user.addresses = (user.addresses || []).filter(
+    (addr) => addr._id?.toString() !== addressId
+  );
+  await user.save();
+
+  successResponse(res, 200, 'Address removed successfully', user.addresses);
+});
+
+// Admin: Get all customers
+export const getAllCustomers = asyncHandler(async (req: Request, res: Response) => {
+  const customers = await User.find({ role: 'customer' })
+    .select('name email phone isActive createdAt')
+    .sort({ createdAt: -1 });
+  
+  successResponse(res, 200, 'Customers fetched successfully', customers);
+});
+
+// Admin: Toggle customer active status (block/unblock)
+export const toggleCustomerStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  const user = await User.findById(id);
+  if (!user) return errorResponse(res, 404, 'Customer not found');
+
+  user.isActive = !user.isActive;
+  await user.save();
+
+  successResponse(res, 200, `Customer ${user.isActive ? 'unblocked' : 'blocked'} successfully`, user);
+});
