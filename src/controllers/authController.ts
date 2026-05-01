@@ -4,6 +4,7 @@ import { User } from '../models/User';
 import { asyncHandler } from '../utils/asyncHandler';
 import { successResponse, errorResponse } from '../utils/responseHandler';
 import { ENV } from '../config/env';
+import { OAuth2Client } from 'google-auth-library';
 
 const generateToken = (id: string, role: string) => {
   return jwt.sign({ id, role }, ENV.JWT_SECRET, {
@@ -258,4 +259,81 @@ export const loginCustomer = asyncHandler(async (req: Request, res: Response) =>
     role: user.role,
     token
   });
+});
+
+// Google OAuth Sign-In
+export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return errorResponse(res, 400, 'Google credential is required');
+  }
+
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  if (!googleClientId) {
+    return errorResponse(res, 500, 'Google OAuth is not configured');
+  }
+
+  const client = new OAuth2Client(googleClientId);
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return errorResponse(res, 400, 'Invalid Google token');
+    }
+
+    const { email, name, picture, sub: googleId } = payload;
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // User exists — check if active
+      if (!user.isActive) {
+        return errorResponse(res, 403, 'Your account has been deactivated');
+      }
+      // Update Google ID if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      // Create new user with Google info (no password needed)
+      user = await User.create({
+        name: name || 'Google User',
+        email,
+        googleId,
+        avatar: picture,
+        role: 'customer',
+        isVerified: true, // Google emails are already verified
+        isActive: true,
+        password: `google_${googleId}_${Date.now()}`, // Random password since Google users don't need one
+      });
+    }
+
+    const token = generateToken(user._id.toString(), user.role);
+
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: ENV.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    successResponse(res, 200, 'Google sign-in successful', {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token
+    });
+  } catch (error: any) {
+    console.error('Google auth error:', error);
+    return errorResponse(res, 401, 'Invalid Google token');
+  }
 });

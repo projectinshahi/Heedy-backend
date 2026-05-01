@@ -11,6 +11,8 @@ export interface IUser extends Document {
   isVerified: boolean;
   otp?: string;
   otpExpires?: Date;
+  googleId?: string;
+  avatar?: string;
   addresses?: {
     _id?: string;
     street?: string;
@@ -32,6 +34,8 @@ const userSchema = new Schema<IUser>({
   isVerified: { type: Boolean, default: false },
   otp: { type: String },
   otpExpires: { type: Date },
+  googleId: { type: String },
+  avatar: { type: String },
   addresses: [{
     street: { type: String },
     city: { type: String },
