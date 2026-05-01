@@ -13,7 +13,7 @@ const app: Application = express();
 
 // Security Middlewares
 app.use(helmet());
-const allowedOrigins = ENV.CORS_ORIGIN.split(',');
+// const allowedOrigins = ENV.CORS_ORIGIN.split(',');
 
 // const corsOptions = {
 //   origin: (origin: string | undefined, callback: any) => {
@@ -34,9 +34,9 @@ const allowedOrigins = ENV.CORS_ORIGIN.split(',');
 // app.options('*', cors(corsOptions));
 
 const corsConfig = {
-  origin: allowedOrigins,
+  origin: "*",
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
 }
 app.use(cors(corsConfig));
 
