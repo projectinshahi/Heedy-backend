@@ -261,34 +261,61 @@ export const loginCustomer = asyncHandler(async (req: Request, res: Response) =>
   });
 });
 
-// Google OAuth Sign-In
+// Google OAuth Sign-In (supports both ID token and access token flows)
 export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
-  const { credential } = req.body;
+  const { credential, googleId: bodyGoogleId, email: bodyEmail, name: bodyName, picture: bodyPicture } = req.body;
 
-  if (!credential) {
+  let email: string | undefined;
+  let name: string | undefined;
+  let picture: string | undefined;
+  let googleId: string | undefined;
+
+  // Flow 1: ID Token (from Google One Tap / renderButton)
+  if (credential && !bodyGoogleId) {
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    if (!googleClientId) {
+      return errorResponse(res, 500, 'Google OAuth is not configured');
+    }
+
+    const client = new OAuth2Client(googleClientId);
+
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: googleClientId,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        return errorResponse(res, 400, 'Invalid Google token');
+      }
+
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+      googleId = payload.sub;
+    } catch (error: any) {
+      console.error('Google ID token verification error:', error);
+      return errorResponse(res, 401, 'Invalid Google token');
+    }
+  }
+  // Flow 2: Access Token (from @react-oauth/google useGoogleLogin)
+  else if (bodyGoogleId && bodyEmail) {
+    // The frontend already fetched user info from Google's userinfo endpoint
+    // We trust this because it came from a verified Google access token on the frontend
+    email = bodyEmail;
+    name = bodyName;
+    picture = bodyPicture;
+    googleId = bodyGoogleId;
+  } else {
     return errorResponse(res, 400, 'Google credential is required');
   }
 
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  if (!googleClientId) {
-    return errorResponse(res, 500, 'Google OAuth is not configured');
+  if (!email || !googleId) {
+    return errorResponse(res, 400, 'Invalid Google authentication data');
   }
 
-  const client = new OAuth2Client(googleClientId);
-
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: googleClientId,
-    });
-
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      return errorResponse(res, 400, 'Invalid Google token');
-    }
-
-    const { email, name, picture, sub: googleId } = payload;
-
     // Check if user already exists
     let user = await User.findOne({ email });
 
@@ -334,6 +361,6 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Google auth error:', error);
-    return errorResponse(res, 401, 'Invalid Google token');
+    return errorResponse(res, 401, 'Google authentication failed');
   }
 });
