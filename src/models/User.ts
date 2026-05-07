@@ -16,6 +16,8 @@ export interface IUser extends Document {
   addresses?: {
     _id?: string;
     street?: string;
+    apartment?: string;
+    landmark?: string;
     city?: string;
     state?: string;
     zipCode?: string;
@@ -38,6 +40,8 @@ const userSchema = new Schema<IUser>({
   avatar: { type: String },
   addresses: [{
     street: { type: String },
+    apartment: { type: String },
+    landmark: { type: String },
     city: { type: String },
     state: { type: String },
     zipCode: { type: String },

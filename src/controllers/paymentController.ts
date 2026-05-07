@@ -20,7 +20,8 @@ export const createOrder = async (req: Request, res: Response) => {
     let razorpayOrder;
     let isMock = false;
 
-    if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID === 'dummy_key_id') {
+    // Razorpay requires minimum ₹1 (100 paise)
+    if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID === 'dummy_key_id' || total < 1) {
       razorpayOrder = {
         id: `mock_order_${Date.now()}`,
         amount: Math.round(total * 100),
