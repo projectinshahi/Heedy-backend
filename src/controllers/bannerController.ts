@@ -4,8 +4,10 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { successResponse, errorResponse } from '../utils/responseHandler';
 
 export const createBanner = asyncHandler(async (req: Request, res: Response) => {
-  if (req.file) {
-    req.body.image = req.file.path;
+  if (req.files) {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    if (files['image']) req.body.image = files['image'][0].path;
+    if (files['mobileImage']) req.body.mobileImage = files['mobileImage'][0].path;
   }
   const banner = await Banner.create(req.body);
   successResponse(res, 201, 'Banner created successfully', banner);
@@ -21,8 +23,10 @@ export const updateBanner = asyncHandler(async (req: Request, res: Response) => 
   if (!banner) {
     return errorResponse(res, 404, 'Banner not found');
   }
-  if (req.file) {
-    req.body.image = req.file.path;
+  if (req.files) {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    if (files['image']) req.body.image = files['image'][0].path;
+    if (files['mobileImage']) req.body.mobileImage = files['mobileImage'][0].path;
   }
   banner = await Banner.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   successResponse(res, 200, 'Banner updated successfully', banner);

@@ -1,8 +1,11 @@
 import express from 'express';
-import { getAddresses, addAddress, deleteAddress, getAllCustomers, toggleCustomerStatus } from '../controllers/userController';
+import { getAddresses, addAddress, deleteAddress, getAllCustomers, toggleCustomerStatus, updateProfile } from '../controllers/userController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 
 const router = express.Router();
+
+router.route('/profile')
+  .put(protect, updateProfile);
 
 router.route('/addresses')
   .get(protect, getAddresses)

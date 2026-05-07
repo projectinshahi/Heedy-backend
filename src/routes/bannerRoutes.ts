@@ -6,11 +6,11 @@ import { upload } from '../middlewares/uploadMiddleware';
 const router = express.Router();
 
 router.route('/')
-  .post(protect, upload.single('image'), createBanner)
+  .post(protect, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), createBanner)
   .get(getBanners);
 
 router.route('/:id')
-  .put(protect, upload.single('image'), updateBanner)
+  .put(protect, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), updateBanner)
   .delete(protect, deleteBanner);
 
 export default router;

@@ -4,6 +4,9 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { successResponse, errorResponse } from '../utils/responseHandler';
 
 export const createCategory = asyncHandler(async (req: Request, res: Response) => {
+  if (req.file) {
+    req.body.image = req.file.path;
+  }
   const category = await Category.create(req.body);
   successResponse(res, 201, 'Category created successfully', category);
 });
@@ -17,6 +20,9 @@ export const updateCategory = asyncHandler(async (req: Request, res: Response) =
   let category = await Category.findById(req.params.id);
   if (!category) {
     return errorResponse(res, 404, 'Category not found');
+  }
+  if (req.file) {
+    req.body.image = req.file.path;
   }
   category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   successResponse(res, 200, 'Category updated successfully', category);

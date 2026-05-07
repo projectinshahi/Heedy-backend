@@ -10,6 +10,27 @@ export const getAddresses = asyncHandler(async (req: Request, res: Response) => 
   successResponse(res, 200, 'Addresses fetched successfully', user.addresses || []);
 });
 
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const user = await User.findById(req.user?._id);
+  if (!user) return errorResponse(res, 404, 'User not found');
+
+  const { name, phone } = req.body;
+  if (name) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+
+  await user.save();
+  
+  const updatedUser = {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role
+  };
+
+  successResponse(res, 200, 'Profile updated successfully', updatedUser);
+});
+
 export const addAddress = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.user?._id);
   if (!user) return errorResponse(res, 404, 'User not found');

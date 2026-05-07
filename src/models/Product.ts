@@ -4,7 +4,6 @@ interface IVariant {
   volume: string;
   price: number;
   oldPrice?: number;
-  stock: number;
 }
 
 export interface IProduct extends Document {
@@ -25,7 +24,6 @@ const variantSchema = new Schema<IVariant>({
   volume: { type: String, required: true },
   price: { type: Number, required: true },
   oldPrice: { type: Number },
-  stock: { type: Number, default: 0 },
 });
 
 const productSchema = new Schema<IProduct>(

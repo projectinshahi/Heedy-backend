@@ -96,33 +96,7 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
       await newOrder.save();
 
-      // Deduct stock for each purchased item
-      for (const item of items) {
-        const product = await Product.findById(item.product);
-        if (!product) continue;
 
-        if (item.size) {
-          // Deduct from the specific variant that matches the size/volume
-          const variantIndex = product.variants.findIndex(
-            (v) => v.volume === item.size
-          );
-          if (variantIndex !== -1) {
-            product.variants[variantIndex].stock = Math.max(
-              0,
-              product.variants[variantIndex].stock - item.quantity
-            );
-          }
-        } else {
-          // No size info — deduct from first variant
-          if (product.variants.length > 0) {
-            product.variants[0].stock = Math.max(
-              0,
-              product.variants[0].stock - item.quantity
-            );
-          }
-        }
-        await product.save();
-      }
 
       // Send Order Confirmation Email
       try {
