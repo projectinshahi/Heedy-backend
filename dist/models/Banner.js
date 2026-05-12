@@ -39,6 +39,7 @@ const bannerSchema = new mongoose_1.Schema({
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     image: { type: String, required: true },
+    mobileImage: { type: String },
     status: { type: String, default: 'ACTIVE' },
 }, { timestamps: true });
 exports.Banner = mongoose_1.default.model('Banner', bannerSchema);

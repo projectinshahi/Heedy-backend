@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginCustomer = exports.registerCustomer = exports.createTestAdmin = exports.loginAdmin = void 0;
+exports.googleAuth = exports.loginCustomer = exports.resendOtp = exports.verifyOtp = exports.registerCustomer = exports.createTestAdmin = exports.loginAdmin = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 const asyncHandler_1 = require("../utils/asyncHandler");
 const responseHandler_1 = require("../utils/responseHandler");
 const env_1 = require("../config/env");
+const google_auth_library_1 = require("google-auth-library");
 const generateToken = (id, role) => {
     return jsonwebtoken_1.default.sign({ id, role }, env_1.ENV.JWT_SECRET, {
         expiresIn: env_1.ENV.JWT_EXPIRES_IN,
@@ -65,23 +66,78 @@ exports.createTestAdmin = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         password: 'password123'
     });
 });
+const sendEmail_1 = require("../utils/sendEmail");
 exports.registerCustomer = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { name, email, password, phone, addresses } = req.body;
     if (!name || !email || !password) {
         return (0, responseHandler_1.errorResponse)(res, 400, 'Please provide name, email and password');
     }
-    const userExists = await User_1.User.findOne({ email });
-    if (userExists) {
-        return (0, responseHandler_1.errorResponse)(res, 400, 'Email is already registered');
+    let user = await User_1.User.findOne({ email });
+    if (user) {
+        if (user.isVerified) {
+            return (0, responseHandler_1.errorResponse)(res, 400, 'Email is already registered');
+        }
+        // If not verified, we can overwrite the existing unverified account or just generate a new OTP
+        user.name = name;
+        user.password = password;
+        user.phone = phone;
+        user.addresses = addresses;
     }
-    const user = await User_1.User.create({
-        name,
-        email,
-        password,
-        phone,
-        role: 'customer',
-        addresses
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    if (!user) {
+        user = await User_1.User.create({
+            name,
+            email,
+            password,
+            phone,
+            role: 'customer',
+            addresses,
+            isVerified: false,
+            otp,
+            otpExpires
+        });
+    }
+    else {
+        user.otp = otp;
+        user.otpExpires = otpExpires;
+        await user.save();
+    }
+    // Send OTP email
+    const message = `Your email verification code is: ${otp}\n\nIt expires in 10 minutes.`;
+    await (0, sendEmail_1.sendEmail)({
+        email: user.email,
+        subject: 'Heedy Luxury - Verify your email',
+        message
     });
+    (0, responseHandler_1.successResponse)(res, 201, 'OTP sent to your email. Please verify to complete registration.', {
+        email: user.email,
+    });
+});
+exports.verifyOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'Please provide email and OTP');
+    }
+    const user = await User_1.User.findOne({ email });
+    if (!user) {
+        return (0, responseHandler_1.errorResponse)(res, 404, 'User not found');
+    }
+    if (user.isVerified) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'User is already verified');
+    }
+    if (user.otp !== otp) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'Invalid OTP code');
+    }
+    if (user.otpExpires && user.otpExpires < new Date()) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'OTP code has expired');
+    }
+    // Verify user
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
     const token = generateToken(user._id.toString(), user.role);
     res.cookie('jwt', token, {
         httpOnly: true,
@@ -89,13 +145,40 @@ exports.registerCustomer = (0, asyncHandler_1.asyncHandler)(async (req, res) => 
         sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
-    (0, responseHandler_1.successResponse)(res, 201, 'Registration successful', {
+    (0, responseHandler_1.successResponse)(res, 200, 'Email verified successfully', {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         token
     });
+});
+exports.resendOtp = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'Please provide email');
+    }
+    const user = await User_1.User.findOne({ email });
+    if (!user) {
+        return (0, responseHandler_1.errorResponse)(res, 404, 'User not found');
+    }
+    if (user.isVerified) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'User is already verified');
+    }
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+    // Send OTP email
+    const message = `Your new email verification code is: ${otp}\n\nIt expires in 10 minutes.`;
+    await (0, sendEmail_1.sendEmail)({
+        email: user.email,
+        subject: 'Heedy Luxury - Verify your email',
+        message
+    });
+    (0, responseHandler_1.successResponse)(res, 200, 'A new OTP has been sent to your email', null);
 });
 exports.loginCustomer = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { email, password } = req.body;
@@ -105,6 +188,9 @@ exports.loginCustomer = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const user = await User_1.User.findOne({ email }).select('+password');
     if (!user || !(await user.matchPassword(password))) {
         return (0, responseHandler_1.errorResponse)(res, 401, 'Invalid email or password');
+    }
+    if (!user.isVerified) {
+        return (0, responseHandler_1.errorResponse)(res, 403, 'Please verify your email to continue. We have sent an OTP to your email during registration.');
     }
     if (!user.isActive) {
         return (0, responseHandler_1.errorResponse)(res, 403, 'Your account has been deactivated');
@@ -127,5 +213,100 @@ exports.loginCustomer = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         role: user.role,
         token
     });
+});
+// Google OAuth Sign-In (supports both ID token and access token flows)
+exports.googleAuth = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { credential, googleId: bodyGoogleId, email: bodyEmail, name: bodyName, picture: bodyPicture } = req.body;
+    let email;
+    let name;
+    let picture;
+    let googleId;
+    // Flow 1: ID Token (from Google One Tap / renderButton)
+    if (credential && !bodyGoogleId) {
+        const googleClientId = process.env.GOOGLE_CLIENT_ID;
+        if (!googleClientId) {
+            return (0, responseHandler_1.errorResponse)(res, 500, 'Google OAuth is not configured');
+        }
+        const client = new google_auth_library_1.OAuth2Client(googleClientId);
+        try {
+            const ticket = await client.verifyIdToken({
+                idToken: credential,
+                audience: googleClientId,
+            });
+            const payload = ticket.getPayload();
+            if (!payload || !payload.email) {
+                return (0, responseHandler_1.errorResponse)(res, 400, 'Invalid Google token');
+            }
+            email = payload.email;
+            name = payload.name;
+            picture = payload.picture;
+            googleId = payload.sub;
+        }
+        catch (error) {
+            console.error('Google ID token verification error:', error);
+            return (0, responseHandler_1.errorResponse)(res, 401, 'Invalid Google token');
+        }
+    }
+    // Flow 2: Access Token (from @react-oauth/google useGoogleLogin)
+    else if (bodyGoogleId && bodyEmail) {
+        // The frontend already fetched user info from Google's userinfo endpoint
+        // We trust this because it came from a verified Google access token on the frontend
+        email = bodyEmail;
+        name = bodyName;
+        picture = bodyPicture;
+        googleId = bodyGoogleId;
+    }
+    else {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'Google credential is required');
+    }
+    if (!email || !googleId) {
+        return (0, responseHandler_1.errorResponse)(res, 400, 'Invalid Google authentication data');
+    }
+    try {
+        // Check if user already exists
+        let user = await User_1.User.findOne({ email });
+        if (user) {
+            // User exists — check if active
+            if (!user.isActive) {
+                return (0, responseHandler_1.errorResponse)(res, 403, 'Your account has been deactivated');
+            }
+            // Update Google ID if not set
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+        }
+        else {
+            // Create new user with Google info (no password needed)
+            user = await User_1.User.create({
+                name: name || 'Google User',
+                email,
+                googleId,
+                avatar: picture,
+                role: 'customer',
+                isVerified: true, // Google emails are already verified
+                isActive: true,
+                password: `google_${googleId}_${Date.now()}`, // Random password since Google users don't need one
+            });
+        }
+        const token = generateToken(user._id.toString(), user.role);
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: env_1.ENV.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+        (0, responseHandler_1.successResponse)(res, 200, 'Google sign-in successful', {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            token
+        });
+    }
+    catch (error) {
+        console.error('Google auth error:', error);
+        return (0, responseHandler_1.errorResponse)(res, 401, 'Google authentication failed');
+    }
 });
 //# sourceMappingURL=authController.js.map

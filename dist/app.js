@@ -12,34 +12,66 @@ const env_1 = require("./config/env");
 const routes_1 = __importDefault(require("./routes"));
 const errorHandler_1 = require("./middlewares/errorHandler");
 const notFoundHandler_1 = require("./middlewares/notFoundHandler");
+const sanitize_1 = require("./middlewares/sanitize");
+const rateLimiter_1 = require("./middlewares/rateLimiter");
+const logger_1 = __importDefault(require("./utils/logger"));
 const app = (0, express_1.default)();
 // Security Middlewares
-app.use((0, helmet_1.default)());
-const allowedOrigins = env_1.ENV.CORS_ORIGIN.split(',');
-const corsOptions = {
-    origin: (origin, callback) => {
-        console.log('CORS Check:', origin);
+// Helmet - sets various HTTP headers for security
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+        },
+    },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+    },
+}));
+// CORS configuration
+const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [];
+const corsConfig = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin)
             return callback(null, true);
         if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
+            callback(null, true);
         }
         else {
-            console.log('Warning: Origin not in allowed list, but allowing for dev:', origin);
-            return callback(null, true); // Temporarily allow all to prevent fetch errors
+            logger_1.default.warn(`CORS blocked request from origin: ${origin}`);
+            callback(new Error("Not allowed by CORS"));
         }
     },
     credentials: true,
+    optionsSuccessStatus: 200,
 };
-app.use((0, cors_1.default)(corsOptions));
-app.options('*', (0, cors_1.default)(corsOptions));
-// Parsers
-app.use(express_1.default.json());
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use((0, cors_1.default)(corsConfig));
+// Body parsers with size limits
+app.use(express_1.default.json({ limit: '100kb' })); // Limit JSON body size
+app.use(express_1.default.urlencoded({ extended: true, limit: '100kb' })); // Limit URL-encoded body size
 app.use((0, cookie_parser_1.default)());
+// Sanitization middleware - prevent NoSQL injection and XSS
+app.use(sanitize_1.sanitizeInput);
+app.use(sanitize_1.sanitizeStrings);
+// Rate limiting - apply to all API routes
+app.use('/api/', rateLimiter_1.apiLimiter);
 // Logger
 if (env_1.ENV.NODE_ENV === 'development') {
     app.use((0, morgan_1.default)('dev'));
+}
+else {
+    // Production logging
+    app.use((0, morgan_1.default)('combined', {
+        stream: {
+            write: (message) => logger_1.default.info(message.trim()),
+        },
+    }));
 }
 // API Routes
 app.use('/api/v1', routes_1.default);

@@ -10,7 +10,7 @@ Order emails now use **Resend API** (replacing Nodemailer).
 ### 2. Local SSL Workaround
 If you see SSL errors locally, the code automatically handles it in `development` mode. No action needed.
 
----
+
 
 ## ☁️ Deployment (Vercel/AWS)
 Add these environment variables to your production dashboard:

@@ -39,7 +39,10 @@ exports.protect = (0, asyncHandler_1.asyncHandler)(async (req, res, next) => {
 const authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user || !roles.includes(req.user.role)) {
-            return (0, responseHandler_1.errorResponse)(res, 403, `User role is not authorized to access this route`);
+            // Log unauthorized access attempt
+            const ip = req.ip || req.socket.remoteAddress || 'unknown';
+            console.warn(`⚠️  Unauthorized access attempt to ${req.path} by user ${req.user?._id} with role ${req.user?.role}`);
+            return (0, responseHandler_1.errorResponse)(res, 403, `User role '${req.user?.role}' is not authorized to access this route`);
         }
         next();
     };

@@ -25,6 +25,6 @@ const storage = new multer_storage_cloudinary_1.CloudinaryStorage({
 });
 exports.upload = (0, multer_1.default)({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: { fileSize: 15 * 1024 * 1024 } // 15MB limit
 });
 //# sourceMappingURL=uploadMiddleware.js.map

@@ -33,25 +33,42 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Product = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const variantSchema = new mongoose_1.Schema({
-    volume: { type: String, required: true },
-    price: { type: Number, required: true },
-    oldPrice: { type: Number },
-});
-const productSchema = new mongoose_1.Schema({
-    name: { type: String, required: true, trim: true },
-    category: { type: String, required: true },
-    description: { type: String, required: true },
-    variants: [variantSchema],
-    starRating: { type: Number, default: 0, min: 0, max: 5 },
-    reviewsCount: { type: Number, default: 0 },
-    offerText: { type: String },
-    keyFeatures: { type: String },
-    images: [{ type: String }],
-    status: { type: String, default: 'In Stock' },
-    showOnLandingPage: { type: Boolean, default: false },
+const OrderSchema = new mongoose_1.Schema({
+    user: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+    items: [
+        {
+            product: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Product', required: true },
+            quantity: { type: Number, required: true },
+            price: { type: Number, required: true },
+            size: { type: String },
+        },
+    ],
+    shippingAddress: {
+        street: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        zipCode: { type: String, required: true },
+        country: { type: String, required: true },
+    },
+    subtotal: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
+    shippingFee: { type: Number, default: 0 },
+    total: { type: Number, required: true },
+    paymentMethod: { type: String, required: true },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'completed', 'failed', 'refunded'],
+        default: 'pending',
+    },
+    orderStatus: {
+        type: String,
+        enum: ['processing', 'shipped', 'delivered', 'cancelled'],
+        default: 'processing',
+    },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String },
+    razorpaySignature: { type: String },
 }, { timestamps: true });
-exports.Product = mongoose_1.default.model('Product', productSchema);
-//# sourceMappingURL=Product.js.map
+exports.default = mongoose_1.default.model('Order', OrderSchema);
+//# sourceMappingURL=Order.js.map

@@ -6,6 +6,9 @@ const router = (0, express_1.Router)();
 router.post('/login', authController_1.loginAdmin);
 router.post('/customer-login', authController_1.loginCustomer);
 router.post('/register', authController_1.registerCustomer);
+router.post('/verify-otp', authController_1.verifyOtp);
+router.post('/resend-otp', authController_1.resendOtp);
+router.post('/google', authController_1.googleAuth);
 router.post('/setup-test-admin', authController_1.createTestAdmin); // Can be called once to generate an admin
 exports.default = router;
 //# sourceMappingURL=authRoutes.js.map
