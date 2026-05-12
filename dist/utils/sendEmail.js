@@ -15,7 +15,7 @@ const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
 const sendEmail = async (options) => {
     try {
         // Resend requires a verified domain or use onboarding@resend.dev for testing
-        const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'info@heedy.shop';
         const fromName = process.env.FROM_NAME || 'Heedy';
         const emailData = {
             from: `${fromName} <${fromEmail}>`,

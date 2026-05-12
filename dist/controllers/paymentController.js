@@ -184,12 +184,28 @@ const updateOrderStatus = async (req, res) => {
             const user = order.user;
             if (user && user.email) {
                 let statusColor = '#3b82f6'; // default blue
-                if (orderStatus === 'delivered')
-                    statusColor = '#10b981'; // green
-                if (orderStatus === 'cancelled')
-                    statusColor = '#ef4444'; // red
-                if (orderStatus === 'processing')
+                let statusMessage = "There is an update regarding your recent order.";
+                let subject = `Order Status Update - Heedy`;
+                if (orderStatus === 'processing') {
                     statusColor = '#f59e0b'; // orange
+                    statusMessage = "Your order has been placed successfully and is now being processed.";
+                    subject = `Order Placed - Heedy`;
+                }
+                else if (orderStatus === 'shipped') {
+                    statusColor = '#3b82f6'; // blue
+                    statusMessage = "Great news! Your order has been shipped and is on its way to you.";
+                    subject = `Order Shipped - Heedy`;
+                }
+                else if (orderStatus === 'delivered') {
+                    statusColor = '#10b981'; // green
+                    statusMessage = "Your order has been delivered successfully. We hope you enjoy your purchase!";
+                    subject = `Order Delivered - Heedy`;
+                }
+                else if (orderStatus === 'cancelled') {
+                    statusColor = '#ef4444'; // red
+                    statusMessage = "Your order has been cancelled. If you have been charged, a refund will be initiated shortly.";
+                    subject = `Order Cancelled - Heedy`;
+                }
                 const htmlMessage = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
               <div style="background-color: #111827; padding: 30px; text-align: center;">
@@ -199,7 +215,7 @@ const updateOrderStatus = async (req, res) => {
                 <h2 style="color: #111827; font-size: 20px; margin-top: 0; margin-bottom: 20px;">Order Status Update</h2>
                 <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
                   Dear <strong>${user.name}</strong>,<br><br>
-                  There is an update regarding your recent order.
+                  ${statusMessage}
                 </p>
                 <div style="background-color: #f9fafb; border: 1px solid #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 30px; text-align: center;">
                   <p style="margin: 0 0 10px 0; color: #374151; font-size: 15px;"><strong>Order ID:</strong> <span style="color: #111827;">${order._id}</span></p>
@@ -223,9 +239,12 @@ const updateOrderStatus = async (req, res) => {
         `;
                 await (0, sendEmail_1.sendEmail)({
                     email: user.email,
-                    subject: `Order ${orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1)} - Heedy`,
+                    subject: subject,
                     html: htmlMessage
                 });
+            }
+            else {
+                console.warn(`Skipping email for order ${order._id} because user email is missing.`);
             }
         }
         catch (emailErr) {
