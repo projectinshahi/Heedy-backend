@@ -123,7 +123,7 @@ export const registerCustomer = asyncHandler(async (req: Request, res: Response)
   const message = `Your email verification code is: ${otp}\n\nIt expires in 10 minutes.`;
   await sendEmail({
     email: user.email,
-    subject: 'Heedy Luxury - Verify your email',
+    subject: 'Heedy - Verify your email',
     message
   });
 

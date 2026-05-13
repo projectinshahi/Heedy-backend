@@ -101,7 +101,12 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
       // Send Order Confirmation Email
       try {
+        console.log('--- Order Confirmation Email Debug ---');
+        console.log('Is req.user present?', !!req.user);
+        console.log('What is req.user.email?', req.user?.email);
+
         if (req.user && req.user.email) {
+          console.log('Preparing to send order confirmation email to:', req.user.email);
           const htmlMessage = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
               <div style="background-color: #111827; padding: 30px; text-align: center;">
@@ -135,6 +140,9 @@ export const verifyPayment = async (req: Request, res: Response) => {
             subject: 'Order Confirmation - Heedy',
             html: htmlMessage
           });
+          console.log('Order confirmation email process completed without throwing errors.');
+        } else {
+          console.log('Skipping email send because user or user.email is missing.');
         }
       } catch (emailErr) {
         console.error('Error sending confirmation email:', emailErr);
